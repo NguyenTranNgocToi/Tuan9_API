@@ -1,40 +1,179 @@
 package com.example.api;
 
-import android.annotation.SuppressLint;
-import android.app.Dialog;
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-    private RequestQueue requestQueue;
-    private ArrayList<User> users = new ArrayList<>();
-    private SwipeRefreshLayout refresh;
-    private UserAdapter adt;
-    private RecyclerView recyclerView;
-    private Dialog dialog;
-
-    public MainActivity() {
-    }
-
-
+    RecyclerView rcv_person;
+    Button btnGetAll,btnPost,btnPut,btnDelete;
+    EditText edId,edName;
+    ArrayList<Person> mpersons;
+    CustomerAdapter adt;
+    String url = "https://60ab127c5a4de40017cc94ba.mockapi.io/";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        refresh = (SwipeRefreshLayout) findViewById(R.id.swipedown);
-        recyclerView =  (RecyclerView) findViewById(R.id.lvUser);
+        rcv_person = findViewById(R.id.rcv_person);
+        btnDelete = findViewById(R.id.btnDelete);
+        btnPost = findViewById(R.id.btnPost);
+        btnGetAll = findViewById(R.id.btnGetAll);
+        btnPut = findViewById(R.id.btnPut);
+        edId = findViewById(R.id.edId);
+        edName = findViewById(R.id.edName);
 
+        mpersons = new ArrayList<>();
+
+
+        btnGetAll.setOnClickListener(view->{
+            mpersons.clear();
+            GetData(url);
+        });
+        btnPut.setOnClickListener(view->{
+            PutApi(url);
+        });
+        btnPost.setOnClickListener(view->{
+            PostApi(url);
+        });
+        btnDelete.setOnClickListener(view->{
+            DeleteApi(url);
+        });
 
 
     }
+
+    private void GetData(String url)
+    {
+        JsonArrayRequest request = new JsonArrayRequest(url+"person", new Response.Listener<JSONArray>() {
+            @Override
+            public void onResponse(JSONArray response) {
+                Toast.makeText(MainActivity.this, "get success", Toast.LENGTH_SHORT).show();
+                try {
+                    for (int i = 0; i < response.length(); i++) {
+                        JSONObject obj = (JSONObject) response.get(i);
+                        String id = obj.getString("id");
+                        String name = obj.getString("name");
+                        Person person = new Person(id,name);
+                        mpersons.add(person);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                adt = new CustomerAdapter(mpersons);
+                rcv_person.setHasFixedSize(true);
+                rcv_person.setAdapter(adt);
+                rcv_person.setLayoutManager(new GridLayoutManager(MainActivity.this,1));
+
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MainActivity.this,"Error make by API server!",Toast.LENGTH_SHORT).show();
+            }
+        });
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(request);
+    }
+
+    private void PutApi(String url)
+    {
+        StringRequest stringRequest = new StringRequest(Request.Method.PUT, url + "person/" + edId.getText().toString(), new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                Toast.makeText(MainActivity.this, "Successfully", Toast.LENGTH_SHORT).show();
+                mpersons.clear();
+                GetData(url);
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MainActivity.this, "Error by Post Data", Toast.LENGTH_SHORT).show();
+            }
+        }){
+
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+                HashMap<String ,String> params = new HashMap<>();
+                params.put("name",edName.getText().toString());
+                return params;
+            }
+        };
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }
+
+    private void PostApi(String url)
+    {
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url + "person/", new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                Toast.makeText(MainActivity.this, "Successfully", Toast.LENGTH_SHORT).show();
+                mpersons.clear();
+                GetData(url);
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MainActivity.this, "Error by Post Data", Toast.LENGTH_SHORT).show();
+            }
+        }){
+
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+                HashMap<String ,String> params = new HashMap<>();
+                String id = edId.getText().toString();
+                String name = edName.getText().toString();
+                params.put("id",id);
+                params.put("name",name);
+                return params;
+            }
+        };
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }
+
+    private void DeleteApi(String url)
+    {
+        StringRequest stringRequest = new StringRequest(Request.Method.DELETE, url + "person/"+ edId.getText().toString(), new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                Toast.makeText(MainActivity.this, "Successfully", Toast.LENGTH_SHORT).show();
+                mpersons.clear();
+                GetData(url);
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MainActivity.this, "Error by Post Data", Toast.LENGTH_SHORT).show();
+            }
+        });
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }
+
+
 }
